@@ -2,7 +2,13 @@ import streamlit as st
 import google.generativeai as genai
 import fitz
 
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+# ── SECRETS MANAGEMENT ────────────────────────────────────────
+# Fixed: Switched from os.environ to st.secrets for Streamlit Cloud deployment
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+else:
+    st.error("Missing GEMINI_API_KEY in Streamlit Secrets!")
+
 model = genai.GenerativeModel("gemini-2.5-flash")  # free tier model
 
 st.set_page_config(page_title="ResearchLens", page_icon="🔬", layout="wide")
@@ -69,31 +75,34 @@ if st.button("🚀 Analyze Papers", type="primary"):
         st.error("Please provide at least 2 papers.")
     else:
         with st.spinner(f"Gemini is analyzing {len(papers)} papers..."):
-            result = analyze_papers(papers)
-        st.success("Analysis complete!")
+            try:
+                result = analyze_papers(papers)
+                st.success("Analysis complete!")
 
-        # Parse sections
-        sections = {"summaries": "", "comparison": "", "gaps": "", "thesis": ""}
-        current = None
-        for line in result.split("\n"):
-            l = line.lower()
-            if "summaries" in l:       current = "summaries"
-            elif "comparison" in l:    current = "comparison"
-            elif "research gap" in l:  current = "gaps"
-            elif "thesis" in l:        current = "thesis"
-            elif current:              sections[current] += line + "\n"
+                # Parse sections
+                sections = {"summaries": "", "comparison": "", "gaps": "", "thesis": ""}
+                current = None
+                for line in result.split("\n"):
+                    l = line.lower()
+                    if "summaries" in l:       current = "summaries"
+                    elif "comparison" in l:    current = "comparison"
+                    elif "research gap" in l:  current = "gaps"
+                    elif "thesis" in l:        current = "thesis"
+                    elif current:              sections[current] += line + "\n"
 
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "📋 Summaries", "🔄 Comparison", "🔍 Research Gaps", "💡 Thesis Topics"
-        ])
-        with tab1: st.markdown(sections["summaries"] or result[:600])
-        with tab2: st.markdown(sections["comparison"])
-        with tab3: st.markdown(sections["gaps"])
-        with tab4: st.markdown(sections["thesis"])
+                tab1, tab2, tab3, tab4 = st.tabs([
+                    "📋 Summaries", "🔄 Comparison", "🔍 Research Gaps", "💡 Thesis Topics"
+                ])
+                with tab1: st.markdown(sections["summaries"] or result[:600])
+                with tab2: st.markdown(sections["comparison"])
+                with tab3: st.markdown(sections["gaps"])
+                with tab4: st.markdown(sections["thesis"])
 
-        st.download_button(
-            "⬇ Download Full Analysis",
-            data=result,
-            file_name="research_analysis.txt",
-            mime="text/plain"
-        )
+                st.download_button(
+                    "⬇ Download Full Analysis",
+                    data=result,
+                    file_name="research_analysis.txt",
+                    mime="text/plain"
+                )
+            except Exception as e:
+                st.error(f"An error occurred during analysis: {e}")
