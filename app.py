@@ -3,7 +3,7 @@ import google.generativeai as genai
 import fitz
 import os
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 model = genai.GenerativeModel("gemini-2.5-flash")  # free tier model
 
 st.set_page_config(page_title="ResearchLens", page_icon="🔬", layout="wide")
